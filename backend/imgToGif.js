@@ -19,7 +19,7 @@ export async function handleImageAttachment(message) {
         const metadata = await sharpImage.metadata();
         if (['jpeg', 'png', 'tiff'].includes(metadata.format)) {
             console.log('Started Image Conversion...');
-            const gifBuffer = await sharpImage.toFormat('gif').toBuffer();
+            const gifBuffer = await sharpImage.toFormat('gif');
             console.log('Finished Image Conversion!');
             const attachment = new AttachmentBuilder(gifBuffer, { name: 'converted.gif' });
             message.channel.send({ files: [attachment] });
