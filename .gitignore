@@ -1,5 +1,3 @@
 node_modules
 audio
 *.env
-config.env
-.env
