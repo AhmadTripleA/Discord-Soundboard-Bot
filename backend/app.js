@@ -10,8 +10,13 @@ import {
 import fs from 'fs';
 import path from 'path';
 import { audioFiles, __dirname } from './audioUpdate.js';
+import { replyToCommand } from './reply.js';
+import { handleImageAttachment } from './imgToGif.js';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const player = createAudioPlayer();
+const generalVCId = '1226323600739401769';
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -21,18 +26,25 @@ const client = new Client({
     ]
 });
 
-const player = createAudioPlayer();
 player.setMaxListeners(50);
 
-const botName = 'ahmad assistant';
-
-client.once('ready', () => {
-    console.log('Bot is online!');
+client.once('ready', async () => {
     console.log(audioFiles);
+    // initFetching();  
+    // khara3aMimo();
+    console.log('Bot is online!');
 });
 
 client.on('messageCreate', async message => {
     try {
+        // Check if the message has attachments
+        if (message.attachments.size > 0) {
+            if (message.content.toLowerCase() == "gif") {
+                await handleImageAttachment(message);
+                return;
+            }
+        }
+
         if (message.author.bot) return;
 
         const command = message.content.toLowerCase();
@@ -51,11 +63,19 @@ client.on('messageCreate', async message => {
 
 function soundboard(message) {
     const command = message.content.toLowerCase();
-    console.log(`Playing ${command} !`);
     try {
-        if (message.member.voice.channel) {
-            const channel = message.member.voice.channel;
+        // check if a person trying to be Wael
+        if (!isWael(message.member.id) && !message.member.voice.channel) {
+            console.log(chalk.gray(`Blud wants to be Wael so hard.`));
+            message.reply(`Blud wants to be Wael so hard. (join a vc first nigga)`);
+            return;
+        }
+
+        // actual logic
+        if (message.member.voice.channel || isWael(message.member.id)) {
+            const channel = findVoiceChannel(message);
             const currentConnection = getVoiceConnection(channel.guild.id);
+
             if (currentConnection) {
                 const currentSubscription = currentConnection.state.subscription;
                 if (currentSubscription && player.state.status !== AudioPlayerStatus.Playing) {
@@ -72,6 +92,7 @@ function soundboard(message) {
             } else {
                 console.log('Bot is not in any voice channel.');
             }
+
             // Ensure that a new connection is only created if there isn't an existing one
             let connection;
             if (!currentConnection || currentConnection.state.status === VoiceConnectionStatus.Destroyed) {
@@ -88,6 +109,8 @@ function soundboard(message) {
             const resource = createAudioResource(fs.createReadStream(filePath));
             player.play(resource);
             connection.subscribe(player);
+
+            console.log(`Playing ${command} !`);
             player.on(AudioPlayerStatus.Idle, () => {
                 // Check if the connection is still valid before attempting to destroy it
                 if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
@@ -95,7 +118,6 @@ function soundboard(message) {
                 }
                 player.removeAllListeners(AudioPlayerStatus.Idle); // Remove the listener after handling the event
             });
-
         } else {
             console.log('You need to join a voice channel first!');
         }
@@ -103,64 +125,23 @@ function soundboard(message) {
         console.error(error);
     }
 }
-
-function replyToCommand(message) {
-
-    const command = message.content.toLowerCase();
-
-    switch (command) {
-        case `hi ${botName} `:
-        case `hi assistant`:
-            message.reply(`Hello ${message.author.username} !`);
-            break;
-        case 'ahmad work days':
-            message.reply(`Mondays, Wednesdays, and Thursdays!`);
-            break;
-        case 'khara 3aleek':
-        case 'khara 3a ahmad':
-        case 'ahmad khara':
-            message.reply(`Khara 3aleek la7alak`);
-            break;
-        case 'kus emak':
-            message.reply(`la tta3em`);
-            break;
-        case 'fuck you':
-        case 'fuck you ahmad':
-        case 'fuck you assistant':
-        case `fuck you ${botName} `:
-            message.reply(`Fuck you la7alak`);
-            break;
-        case 'i swallowed a baby':
-            message.reply(`Good Protein!!`);
-            break;
-        case 'i swallowed a baby':
-            message.reply(`Good Protein!!`);
-            break;
-        case 'mimo':
-        case 'mimo khara':
-        case 'mimo ya khara':
-        case 'khara 3a mimo':
-        case 'khara 3alek mimo':
-            message.reply(`mmmaaaAAAOOOOWWW`);
-            break;
-        case 'nice':
-        case 'good shit':
-        case '3arasi':
-        case '3arasy':
-            message.react('👍');
-            break;
-        default:
-            console.log(
-                chalk.red(`${message.author.username.toLocaleUpperCase()}: `) +
-                chalk.white(`${message.content} `) +
-                chalk.gray(`(${message.createdAt.toLocaleTimeString('en-US')})`)
-            );
-            break;
+function findVoiceChannel(message) {
+    let channel = message.member.voice.channel;
+    if (!channel) {
+        console.log('User is not in a voice channel, joining the specified channel.');
+        channel = client.channels.cache.get(generalVCId);
     }
+    return channel;
 }
-
-const sendMessageRandomly = () => {
-    const randomTime = Math.random() * (14400000 - 3600000) + 3600000;
+function isWael(id) {
+    if (id === '171553425861902336') {
+        console.log(chalk.gray(`Wael Detected, Rules Tolerated.`));
+        return true;
+    };
+    return false;
+}
+function khara3aMimo() {
+    const randomTime = Math.random() * (7200000 - 1800000) + 1800000; // 7200000 ms = 2 hours, 1800000 ms = 30 minutes
     setTimeout(() => {
         // Specify the channel ID where you want to send the message
         const channel = client.channels.cache.get('616752127196528663');
@@ -170,10 +151,41 @@ const sendMessageRandomly = () => {
             console.log('Channel not found');
         }
         // Call the function again to set another timeout
-        sendMessageRandomly();
+        khara3aMimo();
     }, randomTime);
 }
+async function getGeneralChannel() {
+    try {
+        if (DISCORD_TOKEN) {
+            const channel = await client.channels.fetch('616752127196528663');
+            console.log('Fetched New Channel: ' + channel.name);
+            return channel;
+        } else {
+            console.error('Failed to fetch channel: Token is undefined');
+        }
+    } catch (error) {
+        console.error('Failed to fetch channel:', error);
+    }
+}
+async function fetchLast100Messages(channel) {
+    const options = { limit: 100 };
+    const messages = await channel.messages.fetch(options);
+    return messages;
+};
+async function initFetching() {
+    try {
+        const channel = await getGeneralChannel();
+        if (channel) {
+            const messages = await fetchLast100Messages(channel);
+            const content = messages.map(message => message.content);
+            console.log(content);
+            console.log(`Number of messages fetched: ${messages.size}`);
+        } else {
+            console.error('Channel not found or failed to fetch.');
+        }
+    } catch (error) {
+        console.error('Error in fetching messages:', error);
+    }
+};
 
-sendMessageRandomly();
-
-client.login(DISCORD_TOKEN);
+client.login(DISCORD_TOKEN).catch(console.error);
