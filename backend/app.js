@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-dotenv.config({ path: "./../config.env" });
+dotenv.config({ path: "./config.env" });
 import chalk from 'chalk';
 import { Client, GatewayIntentBits } from 'discord.js';
 import {
@@ -189,3 +189,4 @@ async function initFetching() {
 };
 
 client.login(DISCORD_TOKEN).catch(console.error);
+
