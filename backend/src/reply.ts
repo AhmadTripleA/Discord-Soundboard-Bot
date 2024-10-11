@@ -1,7 +1,7 @@
-import chalk from 'chalk';
+import { Message } from 'discord.js';
 const BOT_NAME = process.env.BOT_NAME;
 
-export function replyToCommand(message) {
+export function replyToCommand(message: Message) {
 
     const command = message.content.toLowerCase();
 
@@ -55,11 +55,6 @@ export function replyToCommand(message) {
             message.react('🫵');
             break;
         default:
-            console.log(
-                chalk.red(`${message.author.username.toLocaleUpperCase()}: `) +
-                chalk.white(`${message.content} `) +
-                chalk.gray(`(${message.createdAt.toLocaleTimeString('en-US')})`)
-            );
             break;
     }
 }

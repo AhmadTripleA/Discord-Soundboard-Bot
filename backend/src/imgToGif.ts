@@ -1,28 +1,23 @@
-import { AttachmentBuilder } from 'discord.js';
+import { AttachmentBuilder, Message } from 'discord.js';
 import fetch from 'node-fetch';
 import sharp from 'sharp';
 import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-export async function handleImageAttachment(message) {
+export async function handleImageAttachment(message:Message) {
     try {
         console.log('File Detected...');
         const attachment = message.attachments.first(); // Get the first attachment
-        const fileUrl = attachment.url;
-        const fileName = path.basename(fileUrl.split('?')[0]); // Strip query parameters
+        const fileUrl = attachment?.url;
+        const fileName = path.basename(fileUrl?.split('?')[0] || ''); // Strip query parameters
         const filePath = path.join(__dirname, 'temp', fileName);
 
         console.log('Filename:', fileName);
         console.log('File Path:', filePath);
 
         // Use node-fetch to get the file buffer
-        const response = await fetch(fileUrl);
+        const response = await fetch(fileUrl || '');
         const arrayBuffer = await response.arrayBuffer();
         const fileBuffer = Buffer.from(arrayBuffer);
 
@@ -41,19 +36,19 @@ export async function handleImageAttachment(message) {
         } else {
             message.reply('Please upload a valid image or video format (JPEG, PNG, TIFF, MP4, MOV, AVI, WEBM).');
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error('An error occurred during conversion:', error);
         message.reply(`An error occurred: ${error.message}`);
     }
 }
 
-async function convertImageToGif(fileBuffer, message) {
+async function convertImageToGif(fileBuffer: Buffer, message: Message) {
     console.log('Started Image Conversion...');
     let gifBuffer = await sharp(fileBuffer)
         .resize({ width: 500 }) // Resize to a smaller width
-        .gif({ quality: 80 }) // Reduce quality
+        .gif() // Convert to GIF without specifying quality
         .toBuffer()
-        .catch(err => { throw new Error(`Sharp error: ${err.message}`); });
+        .catch((err: any) => { throw new Error(`Sharp error: ${err.message}`); });
 
     if (gifBuffer.length > 25 * 1024 * 1024) { // Check if the file size exceeds 25 MiB
         throw new Error('Converted GIF is too large to upload to Discord.');
@@ -63,9 +58,9 @@ async function convertImageToGif(fileBuffer, message) {
     message.channel.send({ files: [attachment] });
 }
 
-async function convertVideoToGif(filePath, message) {
+async function convertVideoToGif(filePath: string, message: Message) {
     console.log('Started Video Conversion...');
-    const gifPath = path.join(__dirname, 'temp', 'converted.gif');
+    const gifPath = path.join(__dirname, '../temp', 'converted.gif');
 
     // Construct the FFmpeg command
     const ffmpegCommand = `ffmpeg -i "${filePath}" -vf "fps=24,scale=512:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5" -loop 0 "${gifPath}"`;
@@ -73,14 +68,14 @@ async function convertVideoToGif(filePath, message) {
     try {
         // Execute the FFmpeg command
         await new Promise((resolve, reject) => {
-            exec(ffmpegCommand, (error, stdout, stderr) => {
+            exec(ffmpegCommand, (error: any, stdout: any, stderr: any) => {
                 if (error) {
                     console.error(`FFmpeg error: ${error.message}`);
                     reject(new Error(`FFmpeg error: ${error.message}`));
                 } else {
                     console.log('FFmpeg conversion complete.');
                     console.log(stdout);
-                    resolve();
+                    resolve(void 0);
                 }
             });
         });
